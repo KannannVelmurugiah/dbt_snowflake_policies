@@ -1,0 +1,27 @@
+
+version: 2
+
+models:
+  - name: my_first_dbt_model
+    description: "A starter dbt model"
+    columns:
+      - name: id
+        description: "The primary key for this table"
+        tests:
+          - unique
+          - not_null
+        meta:
+          masking_policy: mp_encrypt_pii
+          row_access_policy: rap_encrypt_table
+
+  - name: my_second_dbt_model
+    description: "A starter dbt model"
+    columns:
+      - name: id
+        description: "The primary key for this table"
+        tests:
+          - unique
+          - not_null
+        meta:
+          masking_policy: mp_encrypt_pii
+          row_access_policy: rap_encrypt

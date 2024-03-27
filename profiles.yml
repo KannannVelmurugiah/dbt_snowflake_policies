@@ -1,0 +1,9 @@
+# Use this template to update your dbt profile for this project.
+# This file will be used to generate a full dbt profile file stored in .dope_env/snowflake/profiles.yml, which will be used when running dbt.
+# Remember to run 'dope workspace set <YOUR_WORKSPACE_NAME>' to update profile changes into your environment profile .dope_env/snowflake/profiles.yml.
+
+database: "PSA_FRAMEWORK_SQL"
+warehouse: "COMPUTE_WH"
+schema: "DBT"
+threads: 5
+client_session_keep_alive: False
