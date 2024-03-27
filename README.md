@@ -247,8 +247,8 @@ graph TD
     A[apply_row_access_policy] --> |resource_type='models',meta_key='row_access_policy'| C[apply_row_access_policy_list_for_models]
     B --> |meta_key| D[confirm row_access policy is avaliable in db]
     C --> |meta_key| D[confirm row_access policy is avaliable in db]
-    D --> E[alter statement to set row_access policy]
-    D --> F[Compilation error raised on the Model]
+    D --> |if_available_in_snowflake| E[alter statement to set row_access policy]
+    D --> |if_not_available| F[Compilation error raised on the Model]
     E--> G[Clone object with applied row access policies]
 ```
 
