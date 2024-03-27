@@ -113,14 +113,6 @@ vars:
             row_access_policy: rap_encrypt
   ```
 
-- Decide you force applying row_access policy to avoid unsetting them before re-applying again - it helps to remove handy stuff whenever the row_access policy definition is relocated to another database/schema:
-  **Example** : var block in dbt_project.yml to enable using force
-
-```yaml
-vars:
-  use_force_applying_row_access_policy: "True"
-```
-
 - Create a new `.sql` file with the name `create_row_access_policy_<row_access-policy-name-from-meta>.sql` and the sql for row_access policy definition. Its important for macro to follow this naming standard.
   
   **Example** : create_row_access_policy_rap_encrypt.sql
