@@ -15,7 +15,9 @@
 - [How to do an integration test ?](#how-to-do-an-integration-test-)
 
 # Overview
-This dbt package contains macros that can be (re)used across dbt projects with snowflake. `dbt_snowflake_policies` will help to apply [Dynamic Data Masking and Row Access Policies](https://docs.snowflake.com/en/user-guide/security-column-ddm-use.html) using [dbt meta](https://docs.getdbt.com/reference/resource-properties/meta).
+This dbt package contains macros that can be (re)used across dbt projects with snowflake. `dbt_snowflake_policies` will help to apply [ Row Access Policies](https://docs.snowflake.com/en/user-guide/security-row-intro) using [dbt meta](https://docs.getdbt.com/reference/resource-properties/meta).
+
+
 
 # Installation Instructions
 
@@ -85,7 +87,7 @@ vars:
 
 - row_access is controlled by [meta](https://docs.getdbt.com/reference/resource-properties/meta) in [dbt resource properties](https://docs.getdbt.com/reference/declaring-properties) for sources and models. 
 
-- Decide your row_access policy name and add the key `row_access_policy` in the column which has to be masked.
+- Decide your row_access policy name and add the key `row_access_policy` in the column which has to be applied.
   
   **Example** : source.yml
 
@@ -97,7 +99,7 @@ vars:
           columns:
             - name: first_name
               meta:
-                  row_access_policy: mp_encrypt_pii
+                  row_access_policy: rap_encrypt
   ```
   
   **Example** : model.yml
@@ -108,7 +110,7 @@ vars:
       columns:
         - name: email
           meta:
-            row_access_policy: mp_encrypt_pii
+            row_access_policy: rap_encrypt
   ```
 
 - Decide you force applying row_access policy to avoid unsetting them before re-applying again - it helps to remove handy stuff whenever the row_access policy definition is relocated to another database/schema:
@@ -121,22 +123,23 @@ vars:
 
 - Create a new `.sql` file with the name `create_row_access_policy_<row_access-policy-name-from-meta>.sql` and the sql for row_access policy definition. Its important for macro to follow this naming standard.
   
-  **Example** : create_row_access_policy_mp_encrypt_pii.sql
+  **Example** : create_row_access_policy_rap_encrypt.sql
 
   ```sql
-  {% macro create_row_access_policy_mp_encrypt_pii(node_database,node_schema) %}
+  {% macro create_row_access_policy_rap_encrypt(node_database,node_schema) %}
 
-  CREATE row_access POLICY IF NOT EXISTS {{node_database}}.{{node_schema}}.mp_encrypt_pii AS (val string) 
-    RETURNS string ->
-        CASE WHEN CURRENT_ROLE() IN ('ANALYST') THEN val 
-             WHEN CURRENT_ROLE() IN ('DEVELOPER') THEN SHA2(val)
-        ELSE '**********'
+    CREATE ROW ACCESS POLICY IF NOT EXISTS {{node_database}}.{{node_schema}}.rap_encrypt AS (val varchar)
+
+    RETURNS BOOLEAN ->
+        CASE WHEN CURRENT_ROLE() IN ('ANALYST','SYSADMIN') THEN TRUE
+        ELSE FALSE
         END
 
-  {% endmacro %}
+{% endmacro %}
+
   ```
 
-> Its good to keep the row_access policy ddl organized in a directory say `\macros\snow-mask-ddl`
+> Its good to keep the row_access policy ddl organized in a directory say `\macros\snow-rap-ddl`
 
 - Create the row_access policies by running below command  
   
@@ -200,7 +203,7 @@ vars:
 | models        | `dbt run-operation unapply_row_access_policy --args '{"resource_type": "models"}'`     |
 | snapshots     | `dbt run-operation unapply_row_access_policy --args '{"resource_type": "snapshots "}'` |
 
-- Alternatively, you can also apply the unmasking policies by specifying below `post-hook` OR `on-run-end` to `dbt_project.yml`
+- Alternatively, you can also unapply the policies by specifying below `post-hook` OR `on-run-end` to `dbt_project.yml`
   
   **Example** : dbt_project.yml
 
@@ -245,16 +248,17 @@ graph TD
     B --> |meta_key| D[confirm row_access policy is avaliable in db]
     C --> |meta_key| D[confirm row_access policy is avaliable in db]
     D --> E[alter statement to set row_access policy]
-    E--> F[Clone object with applied row access policies]
+    D --> F[Compilation error raised on the Model]
+    E--> G[Clone object with applied row access policies]
 ```
 
 # Known Errors and Solutions
 | Error                                                               | Solution                                                                 |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| dict object' has no attribute 'create_row_access_policy_mp_encrypt_pi' | Typo in yaml for row_access_policy, mp_encrypt_pi instead of mp_encrypt_pii |
+| dict object' has no attribute 'create_row_access_policy_rpa_encrypt' | Typo in yaml for row_access_policy, rpa_encrypt instead of rap_encrypt |
 
 # Credits
-This package was created using examples from [Serge](https://www.linkedin.com/in/serge-gekker-912b9928/) and [Matt](https://www.linkedin.com/in/matt-winkler-4024263a/). Please see the [contributors](https://github.com/entechlog/dbt-snow-mask/graphs/contributors) for full list of users who have contributed to this project.
+This package derives major reference from [dbt_snow_mask](https://github.com/entechlog/dbt-snow-mask) package and has been tweaked to support exception handling and Cloning functionality. So it is now a combined package to support both masking policies and row access policies. 
 
 # References
 - https://docs.snowflake.com/en/user-guide/security-column-ddm-intro.html
@@ -264,10 +268,3 @@ This package was created using examples from [Serge](https://www.linkedin.com/in
 
 # Contributions
 Contributions to this package are welcomed. Please create issues for bugs or feature requests for enhancement ideas or PRs for any enhancement contributions.
-
-# How to do an integration test ?
-- This is applicable only to contributors
-- cd into `dbt-snow-mask/integration_tests`
-- Run `dbt deps`
-- Run `dbt seed`
-- Adjust the vars in `integration_tests\dbt_project.yml` and run `dbt run` 
